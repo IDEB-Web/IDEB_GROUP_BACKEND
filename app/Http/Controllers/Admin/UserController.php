@@ -38,5 +38,22 @@ public function reject($id)
         'user' => $user
     ]);
 }
+public function update(Request $request)
+{
+    $user = $request->user();
+
+    $data = $request->only(['name', 'telefono', 'zonaHoraria', 'idioma']);
+
+    // Procesar la foto base64 si viene
+    if ($request->has('foto') && $request->foto) {
+        $data['foto'] = $request->foto; // guardará la cadena base64 tal cual
+    }
+
+    $user->update($data);
+
+    return response()->json($user);
+}
+
+
 
 }

@@ -35,7 +35,7 @@ class UserObserver
             \App\Models\ActivityLog::create([
                 'description' => 'El usuario ' . $user->name . ' fue aprobado.',
                 'user_id' => $user->id,
-                'name' => $user->name, // <-- CORRECCIÓN: El campo en la BD se llama 'name', no 'user_name'.
+                'name' => $user->name,
             ]);
         }
     }
