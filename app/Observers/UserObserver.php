@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Observers;
+
 use App\Models\User;
 use App\Models\ActivityLog;
 
@@ -19,7 +20,7 @@ class UserObserver
     {
         // Verificamos si el campo que cambió fue 'status' y si el nuevo valor es 'aprobado'.
         if ($user->isDirty('status') && $user->status === 'aprobado') {
-            
+
             // --- INICIO DE LA MODIFICACIÓN ---
             //
             // El error que describes ("falta el campo name") ocurre porque, muy probablemente,

@@ -21,7 +21,7 @@ class ResetPasswordCustom extends Notification
 
     public function toMail($notifiable)
     {
-        return (new MailMessage)
+        return (new MailMessage())
             ->subject('Restablecer Contraseña')
             ->line('Haz clic en el siguiente enlace para restablecer tu contraseña:')
             ->action('Restablecer Contraseña', $this->url)

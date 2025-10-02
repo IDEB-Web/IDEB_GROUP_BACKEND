@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -18,4 +19,3 @@ class IsAdmin
         return response()->json(['message' => 'Acceso no autorizado.'], 403);
     }
 }
-

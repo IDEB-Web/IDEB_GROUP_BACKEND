@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -11,82 +12,80 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 
-
-
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
         $request->validate([
-            'name'=>'required|string|max:255',
-            'email'=>'required|email|unique:users',
-            'password'=>'required|string|min:8|confirmed',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $user = User::create([
-            'name'=>$request->name,
-            'email'=>$request->email,
-            'password'=>Hash::make($request->password),
-            'role'=>'user',
-            'status'=>'pendiente',
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'user',
+            'status' => 'pendiente',
         ]);
 
-        return response()->json(['message'=>'Registro exitoso. Cuenta pendiente de aprobación.'],201);
+        return response()->json(['message' => 'Registro exitoso. Cuenta pendiente de aprobación.'], 201);
     }
     public function forgotPassword(Request $request)
-{
-    $request->validate(['email' => 'required|email']);
+    {
+        $request->validate(['email' => 'required|email']);
 
-    $status = Password::sendResetLink($request->only('email'));
+        $status = Password::sendResetLink($request->only('email'));
 
-    return $status === Password::RESET_LINK_SENT
-        ? response()->json(['message' => __($status)])
-        : response()->json(['email' => __($status)], 422);
-}
-
-public function resetPassword(Request $request)
-{
-    $request->validate([
-        'token' => 'required',
-        'email' => 'required|email',
-        'password' => 'required|string|min:8|confirmed',
-    ]);
-
-    $status = Password::reset(
-        $request->only('email', 'password', 'password_confirmation', 'token'),
-        function ($user, $password) {
-            $user->password = Hash::make($password);
-            $user->save();
-        }
-    );
-
-    if ($status === Password::PASSWORD_RESET) {
-        return response()->json(['message' => 'Tu contraseña ha sido restablecida exitosamente.']);
+        return $status === Password::RESET_LINK_SENT
+            ? response()->json(['message' => __($status)])
+            : response()->json(['email' => __($status)], 422);
     }
 
-    return response()->json(['email' => [__($status)]], 422);
-}
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->password = Hash::make($password);
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Tu contraseña ha sido restablecida exitosamente.']);
+        }
+
+        return response()->json(['email' => [__($status)]], 422);
+    }
 
 
 
     public function login(Request $request)
     {
-        $request->validate(['email'=>'required|email','password'=>'required']);
+        $request->validate(['email' => 'required|email','password' => 'required']);
 
-        $user = User::where('email',$request->email)->first();
-        if(!$user || !Hash::check($request->password,$user->password)) {
-            throw ValidationException::withMessages(['email'=>['Credenciales incorrectas.']]);
+        $user = User::where('email', $request->email)->first();
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            throw ValidationException::withMessages(['email' => ['Credenciales incorrectas.']]);
         }
-        if($user->status !== 'aprobado') {
-            return response()->json(['message'=>'Cuenta pendiente o rechazada.'],403);
+        if ($user->status !== 'aprobado') {
+            return response()->json(['message' => 'Cuenta pendiente o rechazada.'], 403);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
         return response()->json([
-            'message'=>'Login exitoso',
-            'access_token'=>$token,
-            'token_type'=>'Bearer',
-            'user'=>$user
+            'message' => 'Login exitoso',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => $user
         ]);
     }
 
@@ -95,68 +94,68 @@ public function resetPassword(Request $request)
         return Socialite::driver('google')->stateless()->redirect();
     }
 
-   public function handleGoogleCallback()
-{
-    $frontend = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:4200'));
+    public function handleGoogleCallback()
+    {
+        $frontend = config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:4200'));
 
-    try {
-        // Obtener datos del usuario de Google
-        $googleUser = Socialite::driver('google')->stateless()->user();
-        Log::info('Google user data:', [
-            'id' => $googleUser->getId(),
-            'name' => $googleUser->getName(),
-            'email' => $googleUser->getEmail()
-        ]);
-
-        // Buscar usuario en DB
-        $user = User::where('email', $googleUser->getEmail())->first();
-        Log::info('Usuario encontrado en DB', ['user' => $user]);
-
-        // Si no existe → crear usuario pendiente
-        if (!$user) {
-            $user = User::create([
+        try {
+            // Obtener datos del usuario de Google
+            $googleUser = Socialite::driver('google')->stateless()->user();
+            Log::info('Google user data:', [
+                'id' => $googleUser->getId(),
                 'name' => $googleUser->getName(),
-                'email' => $googleUser->getEmail(),
-                'google_id' => $googleUser->getId(),
-                'password' => null,
-                'role' => 'user',
-                'status' => 'pendiente',
+                'email' => $googleUser->getEmail()
             ]);
-            Log::info('Usuario creado y pendiente', ['user' => $user]);
 
-            return redirect()->to($frontend . '/auth/pending');
+            // Buscar usuario en DB
+            $user = User::where('email', $googleUser->getEmail())->first();
+            Log::info('Usuario encontrado en DB', ['user' => $user]);
+
+            // Si no existe → crear usuario pendiente
+            if (!$user) {
+                $user = User::create([
+                    'name' => $googleUser->getName(),
+                    'email' => $googleUser->getEmail(),
+                    'google_id' => $googleUser->getId(),
+                    'password' => null,
+                    'role' => 'user',
+                    'status' => 'pendiente',
+                ]);
+                Log::info('Usuario creado y pendiente', ['user' => $user]);
+
+                return redirect()->to($frontend . '/auth/pending');
+            }
+
+            // Usuario existe pero no aprobado
+            if ($user->status !== 'aprobado') {
+                Log::info('Usuario existente no aprobado', ['user' => $user]);
+                return redirect()->to($frontend . '/auth/pending');
+            }
+
+            // Asignar google_id si no tiene
+            if (!$user->google_id) {
+                $user->google_id = $googleUser->getId();
+                $user->save();
+                Log::info('Google ID asignado al usuario', ['user' => $user]);
+            }
+
+            // Crear token para login
+            $token = $user->createToken('auth_token')->plainTextToken;
+            Log::info('Login exitoso, token generado', ['token' => $token]);
+
+            // Redirigir al frontend con token
+            return redirect()->to($frontend . '/auth/callback?token=' . $token);
+
+        } catch (\Exception $e) {
+            Log::error('Error en handleGoogleCallback', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Redirigir al frontend con el mensaje de error para depuración
+            return redirect()->to($frontend . '/auth/error?message=' . urlencode($e->getMessage()));
         }
-
-        // Usuario existe pero no aprobado
-        if ($user->status !== 'aprobado') {
-            Log::info('Usuario existente no aprobado', ['user' => $user]);
-            return redirect()->to($frontend . '/auth/pending');
-        }
-
-        // Asignar google_id si no tiene
-        if (!$user->google_id) {
-            $user->google_id = $googleUser->getId();
-            $user->save();
-            Log::info('Google ID asignado al usuario', ['user' => $user]);
-        }
-
-        // Crear token para login
-        $token = $user->createToken('auth_token')->plainTextToken;
-        Log::info('Login exitoso, token generado', ['token' => $token]);
-
-        // Redirigir al frontend con token
-        return redirect()->to($frontend . '/auth/callback?token=' . $token);
-
-    } catch (\Exception $e) {
-        Log::error('Error en handleGoogleCallback', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        // Redirigir al frontend con el mensaje de error para depuración
-        return redirect()->to($frontend . '/auth/error?message=' . urlencode($e->getMessage()));
     }
-}
 
     public function googleSignIn(Request $request)
     {
@@ -177,7 +176,7 @@ public function resetPassword(Request $request)
 
             $clientId = env('GOOGLE_CLIENT_ID');
 
-\Log::info('Payload Google recibido:', $payload);
+            \Log::info('Payload Google recibido:', $payload);
 
 
 
@@ -207,7 +206,7 @@ public function resetPassword(Request $request)
             }
 
             if ($user->status !== 'aprobado') {
-                return response()->json(['message' => 'Cuenta pendiente o rechazada.'],403);
+                return response()->json(['message' => 'Cuenta pendiente o rechazada.'], 403);
             }
 
             if (!$user->google_id) {
@@ -232,26 +231,23 @@ public function resetPassword(Request $request)
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message'=>'Sesión cerrada.']);
+        return response()->json(['message' => 'Sesión cerrada.']);
     }
     public function update(Request $request)
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    // Campos que vamos a permitir actualizar
-    $data = $request->only(['name', 'telefono', 'zonaHoraria', 'idioma']);
+        // Campos que vamos a permitir actualizar
+        $data = $request->only(['name', 'telefono', 'zonaHoraria', 'idioma']);
 
-    // Solo actualizar foto si existe
-    if ($request->has('foto') && !empty($request->foto)) {
-        $data['foto'] = $request->foto;
+        // Solo actualizar foto si existe
+        if ($request->has('foto') && !empty($request->foto)) {
+            $data['foto'] = $request->foto;
+        }
+
+        $user->update($data);
+
+        return response()->json($user);
     }
 
-    $user->update($data);
-
-    return response()->json($user);
 }
-
-}
-// app/Http/Controllers/UserController.php
-
-
